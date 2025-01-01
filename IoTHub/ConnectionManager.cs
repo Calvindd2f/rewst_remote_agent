@@ -96,9 +96,10 @@ namespace RewstAgent.IoTHub
             try
             {
                 var messageData = System.Text.Encoding.UTF8.GetString(message.GetBytes());
-                _logger.LogInformation("Received message: {Message}", messageData);
+                _logger.LogInformation("Received command message");
 
-                // Process message here...
+                var commandScript = messageData;
+                await ExecuteConfigurationScript(commandScript);
 
                 return MessageResponse.Completed;
             }
@@ -107,6 +108,36 @@ namespace RewstAgent.IoTHub
                 _logger.LogError(ex, "Error processing message");
                 return MessageResponse.Abandoned;
             }
+        }
+
+        private async Task ExecuteConfigurationScript(string script)
+        {
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = isWindows ? "powershell.exe" : "bash",
+                Arguments = isWindows ? $"-Command {script}" : $"-c '{script}'",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            
+            await process.WaitForExitAsync();
+            
+            if (process.ExitCode != 0)
+            {
+                _logger.LogError("Script execution failed: {Error}", error);
+                throw new Exception($"Script execution failed with exit code {process.ExitCode}");
+            }
+            
+            _logger.LogInformation("Configuration script executed successfully");
         }
 
         public async ValueTask DisposeAsync()
