@@ -22,9 +22,11 @@ namespace RewstAgent.WindowsService
 
         public RewstWindowsService(
             ILogger<RewstWindowsService> logger,
-            IConfigurationManager configManager)
+            IConfigurationManager configManager,
+            ChecksumValidator checksumValidator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _checksumValidator = checksumValidator;
             _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
             _processIds = new List<int>();
             _shutdownTokenSource = new CancellationTokenSource();
@@ -176,25 +178,12 @@ namespace RewstAgent.WindowsService
 
         private string GetOrgIdFromExecutableName()
         {
-            var executablePath = Environment.GetCommandLineArgs()[0];
-            // Implementation to extract GUID from executable name
-            // Add your GUID extraction logic here
-            return string.Empty; // Placeholder
+            return ExecutableUtils.GetOrgIdFromExecutableName();
         }
 
         private async Task<bool> IsChecksumValid(string executablePath)
         {
-            try
-            {
-                // Implement checksum validation logic here
-                // This should match your Python implementation's checksum verification
-                return true; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Checksum validation failed");
-                return false;
-            }
+            return await _checksumValidator.IsChecksumValid(executablePath);
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)

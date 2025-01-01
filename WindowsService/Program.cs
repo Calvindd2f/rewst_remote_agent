@@ -30,7 +30,8 @@ namespace RewstAgent.WindowsService
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton<IConfigurationManager, ConfigurationManager>();
+                    services.AddHttpClient<ChecksumValidator>();
+                    services.AddSingleton<IConfigurationManager, ConfigurationManager, ChecksumValidator>();
                     services.AddHostedService<RewstWindowsService>();
                 })
                 .ConfigureLogging((hostContext, logging) =>
