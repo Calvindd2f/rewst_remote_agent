@@ -96,7 +96,7 @@ namespace RewstAgent.Services
                         builder.AddConsole();
                         builder.AddEventLog();
                     });
-                    
+                    services.AddSingleton<ConfigurationPaths>();
                     services.AddSingleton<IConfigurationManager, ConfigurationManager>();
                     services.AddSingleton<ServiceManager>();
                 });

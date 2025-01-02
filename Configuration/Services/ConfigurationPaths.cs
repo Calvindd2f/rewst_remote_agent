@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace RewstAgent.Configuration
+namespace RewstAgent.Configuration.Services
 {
     /// <summary>
     /// Manages configuration and executable paths across different operating systems,

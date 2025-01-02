@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace RewstAgent.Configuration
+namespace RewstAgent.Configuration.Services
 {
     /// <summary>
     /// Enhanced configuration manager that handles loading, saving, and managing configuration
