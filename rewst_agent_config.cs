@@ -92,6 +92,12 @@ namespace RewstAgent
         private async Task<bool> WaitForFiles(string orgId, int timeout = 3600)
         {
             _logger.LogInformation("Waiting for files to be written...");
+
+            // Add detailed logging like Python version
+            var servicePath = _configManager.GetServiceManagerPath(orgId);
+            var agentPath = _configManager.GetAgentExecutablePath(orgId);
+            _logger.LogInformation($"Awaiting Service Manager File: {servicePath} ...");
+            _logger.LogInformation($"Awaiting Agent Service File: {agentPath} ...");
             
             var startTime = DateTime.UtcNow;
             while (true)
@@ -120,6 +126,15 @@ namespace RewstAgent
         {
             try
             {
+                // Validate arguments first
+                if (string.IsNullOrEmpty(configUrl) || 
+                    string.IsNullOrEmpty(configSecret) || 
+                    string.IsNullOrEmpty(orgId))
+                {
+                    _logger.LogError("Missing required parameters. Please ensure --config-url, --org-id and --config-secret are provided.");
+                    EndProgram(1);
+                }
+
                 OutputEnvironmentInfo();
 
                 // Validate input parameters
@@ -168,9 +183,14 @@ namespace RewstAgent
 
                 EndProgram(0);
             }
+            catch (ConfigurationException ex)
+            {
+                _logger.LogError(ex, "Configuration error occurred");
+                EndProgram(2);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred during configuration");
+                _logger.LogError(ex, "An unexpected error occurred");
                 EndProgram(1);
             }
         }
@@ -182,6 +202,24 @@ namespace RewstAgent
         {
             _logger.LogInformation($"Agent configuration is exiting with exit level {exitCode}.");
             Environment.Exit(exitCode);
+        }
+
+        // Add configuration data validation similar to Python version
+        private bool ValidateConfigData(ConfigurationData config)
+        {
+            if (config == null) return false;
+            
+            var requiredProperties = new[]
+            {
+                nameof(config.AzureIoTHubHost),
+                nameof(config.DeviceId),
+                nameof(config.SharedAccessKey),
+                nameof(config.RewstEngineHost),
+                nameof(config.RewstOrgId)
+            };
+
+            return requiredProperties.All(prop => 
+                typeof(ConfigurationData).GetProperty(prop)?.GetValue(config) != null);
         }
 
         /// <summary>
@@ -221,11 +259,44 @@ namespace RewstAgent
             return await rootCommand.InvokeAsync(args);
         }
 
+        private async Task<bool> InstallAndStartService(string orgId)
+        {
+            try
+            {
+                if (!await _serviceManager.InstallService(orgId))
+                {
+                    _logger.LogError("Failed to install service");
+                    return false;
+                }
+
+                if (!await _serviceManager.StartService(orgId))
+                {
+                    _logger.LogError("Failed to start service");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during service installation/startup");
+                return false;
+            }
+        }
+
         private static IServiceProvider CreateServiceProvider()
         {
-            // Set up your dependency injection container here
             var services = new ServiceCollection()
-                .AddLogging(builder => builder.AddConsole())
+                .AddLogging(builder => 
+                {
+                    builder.AddConsole();
+                    builder.SetMinimumLevel(LogLevel.Information);
+                    builder.AddFile("logs/rewst-agent-{Date}.log");
+                })
+                .AddHttpClient()
+                .AddSingleton<ConfigurationPaths>()
+                .AddSingleton<IHostInfoProvider, HostInfoProvider>()
+                .AddSingleton<IConfigurationFetcher, ConfigurationFetcher>()
                 .AddSingleton<IConnectionManager, ConnectionManager>()
                 .AddSingleton<IServiceManager, ServiceManager>()
                 .AddSingleton<IConfigurationManager, ConfigurationManager>()
