@@ -30,6 +30,7 @@ namespace RewstAgent.WindowsService
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddSingleton<IHostInfoProvider, HostInfoProvider>();
                     services.AddSingleton<ConfigurationPaths>();
                     services.AddSingleton<IConfigurationManager, ConfigurationManager, ChecksumValidator>();
                     services.AddHostedService<RewstWindowsService>();
