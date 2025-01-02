@@ -23,6 +23,9 @@ namespace RewstAgent.RemoteAgent
                     services.AddSingleton<IConfigurationManager, ConfigurationManager>();
                     services.AddSingleton<IConnectionManager, ConnectionManager>();
                     services.AddHostedService<RemoteAgentService>();
+                    services.AddSingleton<IoTHubConnectionMaintainer>();
+                    services.AddSingleton<CommandProcessor>();
+                    services.AddHostedService<IoTHubBackgroundService>();
                 })
                 .ConfigureLogging((hostContext, logging) =>
                 {
